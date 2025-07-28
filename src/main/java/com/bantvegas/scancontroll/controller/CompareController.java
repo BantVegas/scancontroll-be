@@ -22,6 +22,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -50,8 +51,10 @@ public class CompareController {
             if (!img.exists() || !meta.exists())
                 return ResponseEntity.status(404).body(Map.of("error", "master.png alebo params.json neexistuje"));
 
+            // Načítaj params.json
             Map<String, Object> metaObj = MAPPER.readValue(meta, Map.class);
 
+            // PNG do base64 pre frontend
             byte[] imgBytes = Files.readAllBytes(img.toPath());
             String b64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(imgBytes);
 
@@ -74,7 +77,7 @@ public class CompareController {
             @RequestParam("params") String paramsJson
     ) {
         try {
-            File masterDir = new File("data/master/" + productNumber);
+            File masterDir = new File("C:/Users/lukac/Desktop/Scancontroll/Scancontroll/data/master" + productNumber);
             if (!masterDir.exists()) {
                 boolean ok = masterDir.mkdirs();
                 if (!ok) {
@@ -89,8 +92,8 @@ public class CompareController {
             File meta = new File(masterDir, "params.json");
             Files.writeString(meta.toPath(), paramsJson);
 
-            log.info("ULOŽENÉ: " + img.getAbsolutePath());
-            log.info("ULOŽENÉ: " + meta.getAbsolutePath());
+            System.out.println("ULOŽENÉ: " + img.getAbsolutePath());
+            System.out.println("ULOŽENÉ: " + meta.getAbsolutePath());
 
             return ResponseEntity.ok(Map.of("message", "Master etiketa uložená"));
         } catch (Exception e) {
@@ -379,14 +382,14 @@ public class CompareController {
     @PostMapping("/report/save")
     public ResponseEntity<?> saveReport(@RequestBody Map<String, Object> report) {
         try {
-            // Zapisuj do data/reporty nie na desktop!
-            String reportDir = "data/reporty";
-            File dir = new File(reportDir);
+            String desktopDir = "C:\\Users\\lukac\\Desktop\\reporty";
+            File dir = new File(desktopDir);
             if (!dir.exists()) dir.mkdirs();
 
             String jobNumber = (String) (report.get("jobNumber") != null ? report.get("jobNumber") : report.getOrDefault("zakazka", null));
             String productNumber = (String) (report.get("productNumber") != null ? report.get("productNumber") : report.getOrDefault("produkt", null));
 
+            // Získať aktuálny čas pre SK časové pásmo (Europe/Bratislava)
             String datum = (String) (report.get("datetime") != null ? report.get("datetime")
                     : report.get("datum") != null ? report.get("datum")
                     : report.getOrDefault("controlDate", null));
@@ -395,6 +398,7 @@ public class CompareController {
                         .format(DateTimeFormatter.ofPattern("d. M. yyyy HH:mm:ss"));
             }
 
+            // VALIDÁCIA
             if (jobNumber == null || jobNumber.trim().isEmpty() ||
                     productNumber == null || productNumber.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -469,7 +473,7 @@ public class CompareController {
                 }
             }
 
-            // 2. Ulož JSON pre dashboard
+            // 2. Ulož JSON pre dashboard – iba summary a chyby, žiadne obrázky/base64!
             String dashboardDir = "data/dashboard";
             File dashDir = new File(dashboardDir);
             if (!dashDir.exists()) dashDir.mkdirs();
@@ -494,6 +498,7 @@ public class CompareController {
             dashJson.put("colorResult", report.getOrDefault("colorResult", "-"));
             dashJson.put("note", report.getOrDefault("note", ""));
 
+            // Pridaj len chyby etikiet (bez obrázkov)
             List<Map<String, Object>> colorData = (List<Map<String, Object>>) report.get("colorData");
             List<Map<String, Object>> barcodeData = (List<Map<String, Object>>) report.get("barcodeData");
             List<Map<String, Object>> ocrData = (List<Map<String, Object>>) report.get("ocrData");
@@ -541,6 +546,7 @@ public class CompareController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+
 
     // ====== UTIL METÓDY ======
     private String safeProductNumber(String raw) {
