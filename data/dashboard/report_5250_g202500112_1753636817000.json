@@ -1,0 +1,32 @@
+{
+  "id" : 1753636817000,
+  "reportType" : "COMPARE",
+  "operator" : "Mato Lukac",
+  "productCode" : "g202500112",
+  "jobNumber" : "5250",
+  "machine" : "X6",
+  "datetime" : "",
+  "windResult" : "OK",
+  "detectedWind" : "A3",
+  "barcodeResult" : "-",
+  "ocrResult" : "-",
+  "colorResult" : "-",
+  "note" : "",
+  "etikety" : [ {
+    "index" : 1,
+    "barcodeError" : "Barcode neočakáva sa",
+    "ocrError" : "Text rozdiel: AT N vs. SY R BT"
+  }, {
+    "index" : 2,
+    "barcodeError" : "Barcode neočakáva sa",
+    "ocrError" : "Text rozdiel: AT N vs. — N B9 A"
+  }, {
+    "index" : 3,
+    "barcodeError" : "Barcode neočakáva sa",
+    "ocrError" : "Text rozdiel: AT N vs. V AND"
+  }, {
+    "index" : 4,
+    "barcodeError" : "Barcode neočakáva sa",
+    "ocrError" : "Text rozdiel: AT N vs. OR E K O 2"
+  } ]
+}
