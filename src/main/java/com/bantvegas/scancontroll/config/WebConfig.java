@@ -5,6 +5,9 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Web konfigurácia pre statické súbory a globálny CORS.
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
@@ -24,19 +27,20 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-
-                        // Lokálne vývojové prostredia:
                 .allowedOriginPatterns(
+                        // Lokálne vývojové prostredia:
                         "http://localhost:5173",
                         "http://127.0.0.1:5173",
                         "http://localhost:3000",
                         "http://127.0.0.1:3000",
+                        // Vercel preview (všetky preview deployments):
                         "https://*.vercel.app",
+                        // Railway deploy (produkcia):
                         "https://scancontroll-be-production.up.railway.app",
+                        // Tvoja vlastná doména:
                         "https://scancontroll.eu",
                         "https://www.scancontroll.eu"
                 )
-
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
