@@ -36,7 +36,7 @@ public class WebConfig implements WebMvcConfigurer {
                         // Vercel preview (všetky preview deployments):
                         "https://*.vercel.app",
                         // Railway deploy (produkcia):
-                        "https://scancontroll-be-production.up.railway.app",
+                        "https://api.scancontroll.eu",
                         // Tvoja vlastná doména:
                         "https://scancontroll.eu",
                         "https://www.scancontroll.eu"
