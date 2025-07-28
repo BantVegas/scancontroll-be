@@ -27,6 +27,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
+                // povolené originy pre FE a preview/prod deployments
                 .allowedOriginPatterns(
                         // Lokálne vývojové prostredia:
                         "http://localhost:5173",
@@ -35,9 +36,11 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://127.0.0.1:3000",
                         // Vercel preview (všetky preview deployments):
                         "https://*.vercel.app",
-                        // Railway deploy (produkcia):
+                        // Railway preview/deploy:
+                        "https://*.up.railway.app",
+                        // Produkčný alias pre BE na vlastnej doméne:
                         "https://api.scancontroll.eu",
-                        // Tvoja vlastná doména:
+                        // FE vlastná doména:
                         "https://scancontroll.eu",
                         "https://www.scancontroll.eu"
                 )
