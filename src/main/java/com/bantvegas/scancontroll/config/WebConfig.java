@@ -24,11 +24,19 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns( // ← TOTO je dôležité!
+                .allowedOriginPatterns(
+                        // Lokálne vývojové prostredia:
                         "http://localhost:5173",
                         "http://127.0.0.1:5173",
                         "http://localhost:3000",
-                        "http://127.0.0.1:3000"
+                        "http://127.0.0.1:3000",
+                        // Vercel preview (povolí všetky preview deployments):
+                        "https://*.vercel.app",
+                        // Railway deploy (produkcia):
+                        "https://scancontroll-be-production.up.railway.app",
+                        // Tvoja vlastná doména:
+                        "https://scancontroll.eu",
+                        "https://www.scancontroll.eu"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
