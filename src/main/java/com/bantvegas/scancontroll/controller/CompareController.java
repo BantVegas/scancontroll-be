@@ -21,6 +21,7 @@ import java.util.*;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api")
@@ -375,12 +376,12 @@ public class CompareController {
         }
     }
 
-    // ======== REPORT SAVE ENDPOINT (TXT + DASHBOARD JSON) ========
+    // ======== REPORT SAVE ENDPOINT (TXT + DASHBOARD JSON na DESKTOP) ========
     @PostMapping("/report/save")
     public ResponseEntity<?> saveReport(@RequestBody Map<String, Object> report) {
         try {
-            // Zapisuj do data/reporty nie na desktop!
-            String reportDir = "data/reporty";
+            // Ukladanie na Desktop používateľa lukac
+            String reportDir = "C:/Users/lukac/Desktop/reporty";
             File dir = new File(reportDir);
             if (!dir.exists()) dir.mkdirs();
 
@@ -469,8 +470,8 @@ public class CompareController {
                 }
             }
 
-            // 2. Ulož JSON pre dashboard
-            String dashboardDir = "data/dashboard";
+            // 2. Ulož JSON pre dashboard - tiež na Desktop do rovnakého priečinka
+            String dashboardDir = "C:/Users/lukac/Desktop/reporty";
             File dashDir = new File(dashboardDir);
             if (!dashDir.exists()) dashDir.mkdirs();
 
@@ -614,6 +615,7 @@ public class CompareController {
         return img.getSubimage(xx, yy, ww, hh);
     }
 }
+
 
 
 
