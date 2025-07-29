@@ -615,24 +615,3 @@ public class CompareController {
         return img.getSubimage(xx, yy, ww, hh);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
