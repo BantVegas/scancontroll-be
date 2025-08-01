@@ -46,11 +46,9 @@ public class PantoneCompareController {
         report.setMatchPercent(resp.getMatchPercent());
         report.setRating(resp.getRating());
 
-        pantoneReportService.savePantoneReport(report); // ← tu sa uloží aj TXT
+        pantoneReportService.savePantoneReport(report); // Uloží report aj TXT
 
         // 3. Vráť odpoveď pre FE
         return resp;
     }
 }
-
-

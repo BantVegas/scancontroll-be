@@ -72,7 +72,7 @@ public class PantoneReportService {
         }
     }
 
-    // Agregátor pre dashboard – vracia JSON pole map podľa dashboard štruktúry
+    // Agregátor pre dashboard – vracia JSON pole map podľa dashboard štruktúry
     public List<Map<String, Object>> getAllPantoneReports() {
         List<Map<String, Object>> out = new ArrayList<>();
         File dir = new File(REPORTS_DIR);
@@ -144,6 +144,7 @@ public class PantoneReportService {
     private String sanitizeFileName(String name) {
         return name.replaceAll("[^a-zA-Z0-9_-]", "_");
     }
+
     private String safe(Object s) {
         return s == null ? "-" : s.toString();
     }
@@ -154,7 +155,3 @@ public class PantoneReportService {
         try { return Double.parseDouble(s); } catch (Exception e) { return null; }
     }
 }
-
-
-
-

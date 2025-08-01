@@ -7,5 +7,5 @@ public record NearestResponse(
         int g,
         int b,
         double deltaE2000
-) {}
+) { }
 

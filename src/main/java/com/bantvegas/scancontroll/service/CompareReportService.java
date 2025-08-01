@@ -9,8 +9,8 @@ import java.util.*;
 @Service
 public class CompareReportService {
 
-    // DÁVAJ POZOR: TU MUSÍ BYŤ ROVNAKÝ ADRESÁR AKO V SAVE METÓDE!!!
-    private static final String DIR = "data/dashboard"; // Zmeň na adresár kde máš COMPARE reporty
+    // ZJEDNOTENÝ adresár s kontrolérom
+    private static final String DIR = "C:/Users/lukac/Desktop/reporty";
 
     public List<Map<String, Object>> getAllCompareReports() {
         File dir = new File(DIR);
@@ -22,7 +22,7 @@ public class CompareReportService {
                 try (FileReader fr = new FileReader(f)) {
                     Map<String, Object> data = mapper.readValue(fr, Map.class);
 
-                    // Toto je dôležité – ber iba COMPARE reporty!
+                    // Ber iba COMPARE reporty!
                     String type = Objects.toString(data.get("reportType"), "").toUpperCase();
                     if (!"COMPARE".equals(type)) continue;
 
@@ -51,5 +51,7 @@ public class CompareReportService {
         return out;
     }
 }
+
+
 
 
