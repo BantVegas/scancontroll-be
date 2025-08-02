@@ -33,6 +33,12 @@ public class CompareController {
     private final OcrService ocrService;
     private final OcrComparisonService ocrComparisonService;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    // Tu nastav základnú cestu na master dáta:
+    private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
+
+    private static final String REPORTY_PATH = "C:/Users/lukac/Desktop/reporty";
+
     private static final String DENZITA_SCRIPT_PATH =
             System.getProperty("user.dir") + File.separator +
                     "python" + File.separator +
@@ -42,7 +48,7 @@ public class CompareController {
     @GetMapping("/master/load")
     public ResponseEntity<?> loadMaster(@RequestParam("productNumber") String productNumber) {
         try {
-            File masterDir = new File("data/master/" + productNumber);
+            File masterDir = new File(MASTER_BASE_PATH + productNumber);
             if (!masterDir.exists() || !masterDir.isDirectory())
                 return ResponseEntity.status(404).body(Map.of("error", "Master adresár neexistuje: " + masterDir.getAbsolutePath()));
 
@@ -75,7 +81,7 @@ public class CompareController {
             @RequestParam("params") String paramsJson
     ) {
         try {
-            File masterDir = new File("data/master/" + productNumber);
+            File masterDir = new File(MASTER_BASE_PATH + productNumber);
             if (!masterDir.exists()) {
                 boolean ok = masterDir.mkdirs();
                 if (!ok) {
@@ -124,6 +130,7 @@ public class CompareController {
             @RequestParam(value = "date", required = false) String date,
             @RequestParam(value = "ackBoxes", required = false) String ackBoxesJson
     ) {
+        long startAll = System.currentTimeMillis();
         String productNumber = safeProductNumber(productNumberRaw);
 
         File stripTmp = null;
@@ -132,6 +139,8 @@ public class CompareController {
 
         try {
             int totalLabels = rows * cols;
+
+            long t0 = System.currentTimeMillis();
             stripTmp = File.createTempFile("strip-", ".png");
             scanFile.transferTo(stripTmp);
             BufferedImage stripImg = ImageIO.read(stripTmp);
@@ -139,6 +148,9 @@ public class CompareController {
             masterTmp = File.createTempFile("master-", ".png");
             masterFile.transferTo(masterTmp);
             BufferedImage masterImg = ImageIO.read(masterTmp);
+
+            long t1 = System.currentTimeMillis();
+            log.info("LOG: [ČÍTANIE OBRÁZKOV] {} ms", (t1 - t0));
 
             BufferedImage masterCrop = masterImg;
             if (masterImg.getWidth() > 8 && masterImg.getHeight() > 8) {
@@ -149,15 +161,19 @@ public class CompareController {
                 );
             }
 
-            // ---- BARCODE MASTER ----
+            // Barcode na master etikete
+            long t2 = System.currentTimeMillis();
             List<BarcodeResult> masterCodes = barcodeService.decodeAllBarcodes(masterCrop);
             String expectedBarcode = (masterCodes != null && !masterCodes.isEmpty() && masterCodes.get(0).getValue() != null)
                     ? masterCodes.get(0).getValue()
                     : null;
+            long t3 = System.currentTimeMillis();
+            log.info("LOG: [DETEKCIA BARCODE MASTER] {} ms", (t3 - t2));
 
             int gapXPx = (int) Math.round(Double.parseDouble(horizontalGapMm) / 25.4 * dpi);
             int gapYPx = (int) Math.round(Double.parseDouble(verticalGapMm) / 25.4 * dpi);
 
+            long t4 = System.currentTimeMillis();
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     int x0 = c * (labelWidthPx + gapXPx);
@@ -168,11 +184,13 @@ public class CompareController {
                     labelFiles.add(tmp);
                 }
             }
+            long t5 = System.currentTimeMillis();
+            log.info("LOG: [SLICE/CROP etikiet] {} ms ({} etikiet)", (t5 - t4), labelFiles.size());
 
-            // Accepted errors
+            // ---- TU je upravená cesta na accepted_errors.json! ----
             Set<String> acceptedErrors = new HashSet<>();
             if (productNumber != null && !productNumber.isBlank()) {
-                File ackFile = new File("data/master/" + productNumber + "/accepted_errors.json");
+                File ackFile = new File(MASTER_BASE_PATH + productNumber + "/accepted_errors.json");
                 if (ackFile.exists()) {
                     try {
                         String ackJson = Files.readString(ackFile.toPath()).trim();
@@ -186,45 +204,69 @@ public class CompareController {
                 }
             }
 
-            // Detekcia navinu
-            String detectedWind = detectWindByOcr(labelFiles.get(0));
+            // NAVIN: kontrola len na prvej etikete
+            long t6 = System.currentTimeMillis();
+            String detectedWind = detectWindByOcr(labelFiles.get(0)); // IBA prvá etiketa
+            long t7 = System.currentTimeMillis();
+            log.info("LOG: [OCR NAVIN] {} ms", (t7 - t6));
+
             String expectedWind = wind;
             String windResult;
             String windDetail;
             if (detectedWind == null) {
                 windResult = "CHYBA";
                 windDetail = "Nepodarilo sa zistiť orientáciu etikiet (navin) cez OCR!";
-            } else if (!detectedWind.equalsIgnoreCase(expectedWind)) {
-                windResult = "CHYBA";
-                windDetail = "Etikety na páse sú otočené nesprávne (detekované: " +
-                        detectedWind + ", očakávané: " + expectedWind + ")";
             } else {
-                windResult = "OK";
-                windDetail = "Navin etikiet je správny (" + expectedWind + ")";
+                switch (detectedWind) {
+                    case "A1":
+                        windDetail = "Navin etikiet je A1 (otočené o 90° v smere hodinových ručičiek)";
+                        break;
+                    case "A2":
+                        windDetail = "Navin etikiet je A2 (žiadne otočenie)";
+                        break;
+                    case "A3":
+                        windDetail = "Navin etikiet je A3 (otočené o -90°/270°)";
+                        break;
+                    case "A4":
+                        windDetail = "Navin etikiet je A4 (otočené o 180°)";
+                        break;
+                    default:
+                        windDetail = "Navin etikiet je neznámy (" + detectedWind + ")";
+                }
+                if (!detectedWind.equalsIgnoreCase(expectedWind)) {
+                    windResult = "CHYBA";
+                    windDetail += " – NESÚHLASÍ s očakávaným (" + expectedWind + ")";
+                } else {
+                    windResult = "OK";
+                    windDetail += " – Súhlasí s očakávaným (" + expectedWind + ")";
+                }
             }
 
-            // OCR porovnanie
+            long t8 = System.currentTimeMillis();
             List<LabelResult> labelResults = ocrComparisonService.compareAllLabels(masterTmp, labelFiles, expectedBarcode);
+            long t9 = System.currentTimeMillis();
+            log.info("LOG: [OCR POROVNANIE VŠETKÝCH ETIKIET] {} ms", (t9 - t8));
 
-            // ---- BARCODE DATA ----
+            long t10 = System.currentTimeMillis();
             List<Map<String, Object>> barcodeData = new ArrayList<>();
-            int missing = 0;
-            boolean allValid = true;
             String barcodeMsg;
 
+            // ********* ÚPRAVA: AK NA MASTER ETIKETE NIE JE BARCODE **********
             if (expectedBarcode == null) {
                 for (int i = 0; i < labelFiles.size(); i++) {
                     Map<String, Object> br = new LinkedHashMap<>();
                     br.put("index", i + 1);
                     br.put("text", null);
                     br.put("format", null);
-                    br.put("valid", false);
-                    br.put("error", "Barcode neočakáva sa");
+                    br.put("valid", true);
+                    br.put("error", null);
                     br.put("points", List.of());
                     barcodeData.add(br);
                 }
                 barcodeMsg = "Bez čiarového kódu (neočakáva sa)";
             } else {
+                int missing = 0;
+                boolean allValid = true;
                 for (LabelResult lr : labelResults) {
                     Map<String, Object> br = new LinkedHashMap<>();
                     BarcodeResult bc = (lr.barcodes != null && !lr.barcodes.isEmpty()) ? lr.barcodes.get(0) : null;
@@ -266,8 +308,10 @@ public class CompareController {
                     barcodeMsg = "❌ Nie všetky kódy sú platné";
                 }
             }
+            long t11 = System.currentTimeMillis();
+            log.info("LOG: [BARCODE VALIDÁCIA] {} ms", (t11 - t10));
 
-            // OCR data
+            long t12 = System.currentTimeMillis();
             List<Map<String, Object>> ocrData = new ArrayList<>();
             boolean hasOcrError = false;
             for (LabelResult lr : labelResults) {
@@ -310,13 +354,18 @@ public class CompareController {
                 ocrOK.put("hash", "");
                 ocrData.add(ocrOK);
             }
+            long t13 = System.currentTimeMillis();
+            log.info("LOG: [OCR DATA PREPOČET] {} ms", (t13 - t12));
 
-            // Farebnosť
+            long t14 = System.currentTimeMillis();
             List<Map<String, Object>> colorData = new ArrayList<>();
             List<String> colorSummaries = new ArrayList<>();
             for (int i = 0; i < labelFiles.size(); i++) {
                 File lf = labelFiles.get(i);
+                long tColorStart = System.currentTimeMillis();
                 Map<String, Object> colorDiffRaw = callDenzitaComparePython(masterTmp, lf);
+                long tColorEnd = System.currentTimeMillis();
+                log.info("LOG: [DENZITA LABEL {}] {} ms", (i + 1), (tColorEnd - tColorStart));
                 Map<String, Object> colorDiff = new LinkedHashMap<>(colorDiffRaw);
                 double diff = 0;
                 if (colorDiff.get("rozdiel") instanceof Number) {
@@ -329,6 +378,8 @@ public class CompareController {
                 colorSummaries.add(summary);
             }
             String colorSummary = colorSummaries.stream().anyMatch(s -> s.startsWith("Príliš")) ? "Chyba" : "OK";
+            long t15 = System.currentTimeMillis();
+            log.info("LOG: [DENZITA VŠETKYCH ETIKIET] {} ms", (t15 - t14));
 
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("operatorName", operatorName != null ? operatorName : "-");
@@ -360,6 +411,9 @@ public class CompareController {
                 } catch (Exception ignored) {}
             }
 
+            long endAll = System.currentTimeMillis();
+            log.info("LOG: [CELKOVÉ TRVANIE /compare] {} ms", (endAll - startAll));
+
             return ResponseEntity.ok(resp);
 
         } catch (Exception e) {
@@ -376,12 +430,11 @@ public class CompareController {
         }
     }
 
-    // ======== REPORT SAVE ENDPOINT (TXT + DASHBOARD JSON na DESKTOP) ========
+    // ======== REPORT SAVE ENDPOINT ======== (bez zmien)
     @PostMapping("/report/save")
     public ResponseEntity<?> saveReport(@RequestBody Map<String, Object> report) {
         try {
-            // Ukladanie na Desktop používateľa lukac
-            String reportDir = "C:/Users/lukac/Desktop/reporty";
+            String reportDir = REPORTY_PATH;
             File dir = new File(reportDir);
             if (!dir.exists()) dir.mkdirs();
 
@@ -433,7 +486,6 @@ public class CompareController {
                     int etiketaIdx = i + 1;
                     pw.println("Etiketa č." + etiketaIdx);
 
-                    // Barcode
                     Map<String, Object> bc = barcodeData != null && barcodeData.size() > i ? barcodeData.get(i) : null;
                     if (bc != null && Boolean.FALSE.equals(bc.get("valid"))) {
                         pw.println("  Barcode: ❌ " + bc.getOrDefault("error", "-"));
@@ -441,7 +493,6 @@ public class CompareController {
                         pw.println("  Barcode: OK");
                     }
 
-                    // OCR
                     boolean ocrChyba = false;
                     if (ocrData != null) {
                         for (Map<String, Object> o : ocrData) {
@@ -457,7 +508,6 @@ public class CompareController {
                         pw.println("  Text: OK");
                     }
 
-                    // Farebnosť
                     Map<String, Object> c = colorData != null && colorData.size() > i ? colorData.get(i) : null;
                     if (c != null) {
                         pw.println("  Farebnosť: " + c.getOrDefault("summary", "-"));
@@ -470,8 +520,7 @@ public class CompareController {
                 }
             }
 
-            // 2. Ulož JSON pre dashboard - tiež na Desktop do rovnakého priečinka
-            String dashboardDir = "C:/Users/lukac/Desktop/reporty";
+            String dashboardDir = REPORTY_PATH;
             File dashDir = new File(dashboardDir);
             if (!dashDir.exists()) dashDir.mkdirs();
 
@@ -615,3 +664,6 @@ public class CompareController {
         return img.getSubimage(xx, yy, ww, hh);
     }
 }
+
+
+
