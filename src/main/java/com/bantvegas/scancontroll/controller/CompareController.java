@@ -263,7 +263,7 @@ public class CompareController {
                     br.put("points", List.of());
                     barcodeData.add(br);
                 }
-                barcodeMsg = "Bez čiarového kódu (neočakáva sa)";
+                barcodeMsg = "Bez čiarového kódu (neočakáva sa!)";
             } else {
                 int missing = 0;
                 boolean allValid = true;
