@@ -36,7 +36,7 @@ public class CompareController {
 
     // ======= OPRAVENÁ cesta na zápis, crossplatform =======
     // Poznámka: ./data/master/ a ./data/reporty/ (relatívne k .jar)
-    private static final String MASTER_BASE_PATH = "./data/master/";
+    private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
     private static final String REPORTY_PATH = "./data/reporty/";
 
     private static final String DENZITA_SCRIPT_PATH =
