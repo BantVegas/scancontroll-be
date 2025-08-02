@@ -34,10 +34,17 @@ public class CompareController {
     private final OcrComparisonService ocrComparisonService;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    // ======= OPRAVENÁ cesta na zápis, crossplatform =======
-    // Poznámka: ./data/master/ a ./data/reporty/ (relatívne k .jar)
-    private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
-    private static final String REPORTY_PATH = "./data/reporty/";
+    // ======= Crossplatform cesta na zápis (detekuje OS) =======
+    private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
+
+    // -- Windows: Desktop, Linux/Cloud: ./data/master/
+    private static final String MASTER_BASE_PATH = IS_WINDOWS
+            ? "C:/Users/lukac/Desktop/Master/"
+            : "./data/master/";
+
+    private static final String REPORTY_PATH = IS_WINDOWS
+            ? "C:/Users/lukac/Desktop/Reporty/"
+            : "./data/reporty/";
 
     private static final String DENZITA_SCRIPT_PATH =
             System.getProperty("user.dir") + File.separator +
@@ -190,7 +197,7 @@ public class CompareController {
             long t5 = System.currentTimeMillis();
             log.info("LOG: [SLICE/CROP etikiet] {} ms ({} etikiet)", (t5 - t4), labelFiles.size());
 
-            // ---- TU je upravená cesta na accepted_errors.json! ----
+            // ---- accepted_errors.json podľa prostredia ----
             Set<String> acceptedErrors = new HashSet<>();
             if (productNumber != null && !productNumber.isBlank()) {
                 File ackFile = new File(MASTER_BASE_PATH + productNumber + "/accepted_errors.json");
@@ -667,6 +674,7 @@ public class CompareController {
         return img.getSubimage(xx, yy, ww, hh);
     }
 }
+
 
 
 
