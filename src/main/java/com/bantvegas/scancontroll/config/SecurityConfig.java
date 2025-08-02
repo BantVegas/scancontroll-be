@@ -28,10 +28,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "https://scancontroll.vercel.app",
-                "https://api.scancontroll.eu",
-                "https://scancontroll.eu"
-
-                // Pridaj ďalšie povolené FE domény ak treba
+                "https://scancontroll.eu",
+                "https://www.scancontroll.eu"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -42,4 +40,5 @@ public class SecurityConfig {
         return source;
     }
 }
+
 
