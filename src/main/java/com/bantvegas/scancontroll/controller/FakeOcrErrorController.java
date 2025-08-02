@@ -14,6 +14,9 @@ import java.util.Map;
 @RequestMapping("/api/ai/fake-ocr-error")
 public class FakeOcrErrorController {
 
+    // Nastav základnú cestu na master etikety (ako v CompareController)
+    private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
+
     @PostMapping
     public ResponseEntity<?> saveFakeOcrError(@RequestBody Map<String, Object> req) {
         String masterText = (String) req.get("masterText");
@@ -22,7 +25,11 @@ public class FakeOcrErrorController {
         String productNumber = req.get("productNumber") != null ? (String) req.get("productNumber") : null;
         String hash = DigestUtils.sha256Hex(masterText + "||" + scanText);
 
-        String dirPath = "data/master/" + productNumber;
+        if (productNumber == null || productNumber.isBlank()) {
+            return ResponseEntity.badRequest().body("Missing productNumber");
+        }
+
+        String dirPath = MASTER_BASE_PATH + productNumber;
 
         List<FakeOcrError> exist = AcceptedErrorsUtil.loadFakeErrors(dirPath);
         boolean found = exist.stream().anyMatch(e -> hash.equals(e.getHash()));
