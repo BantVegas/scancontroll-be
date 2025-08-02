@@ -34,10 +34,10 @@ public class CompareController {
     private final OcrComparisonService ocrComparisonService;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    // Tu nastav základnú cestu na master dáta:
-    private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
-
-    private static final String REPORTY_PATH = "C:/Users/lukac/Desktop/reporty";
+    // ======= OPRAVENÁ cesta na zápis, crossplatform =======
+    // Poznámka: ./data/master/ a ./data/reporty/ (relatívne k .jar)
+    private static final String MASTER_BASE_PATH = "./data/master/";
+    private static final String REPORTY_PATH = "./data/reporty/";
 
     private static final String DENZITA_SCRIPT_PATH =
             System.getProperty("user.dir") + File.separator +
@@ -69,7 +69,7 @@ public class CompareController {
             return ResponseEntity.ok(resp);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "exception", e.toString()));
         }
     }
 
@@ -81,10 +81,12 @@ public class CompareController {
             @RequestParam("params") String paramsJson
     ) {
         try {
+            // Kontrola adresára
             File masterDir = new File(MASTER_BASE_PATH + productNumber);
             if (!masterDir.exists()) {
                 boolean ok = masterDir.mkdirs();
                 if (!ok) {
+                    log.error("Nepodarilo sa vytvoriť adresár: {}", masterDir.getAbsolutePath());
                     return ResponseEntity.status(500)
                             .body(Map.of("error", "Nepodarilo sa vytvoriť adresár: " + masterDir.getAbsolutePath()));
                 }
@@ -96,13 +98,14 @@ public class CompareController {
             File meta = new File(masterDir, "params.json");
             Files.writeString(meta.toPath(), paramsJson);
 
-            log.info("ULOŽENÉ: " + img.getAbsolutePath());
-            log.info("ULOŽENÉ: " + meta.getAbsolutePath());
+            log.info("ULOŽENÉ: {}", img.getAbsolutePath());
+            log.info("ULOŽENÉ: {}", meta.getAbsolutePath());
 
             return ResponseEntity.ok(Map.of("message", "Master etiketa uložená"));
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            log.error("Chyba pri ukladaní master etikety", e);
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage(), "exception", e.toString()));
         }
     }
 
@@ -430,7 +433,7 @@ public class CompareController {
         }
     }
 
-    // ======== REPORT SAVE ENDPOINT ======== (bez zmien)
+    // ======== REPORT SAVE ENDPOINT ========
     @PostMapping("/report/save")
     public ResponseEntity<?> saveReport(@RequestBody Map<String, Object> report) {
         try {
