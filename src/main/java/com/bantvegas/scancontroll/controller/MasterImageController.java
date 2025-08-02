@@ -13,7 +13,8 @@ public class MasterImageController {
     @GetMapping("/image")
     public ResponseEntity<Resource> getMasterImage(@RequestParam String productNumber) {
         try {
-            Path path = Paths.get("data/master/" + productNumber + "/master.png");
+            // TU UPRAV CESTU NA DISK (Windows, žiadne data/master)
+            Path path = Paths.get("C:/Users/lukac/Desktop/Master/" + productNumber + "/master.png");
             if (!Files.exists(path)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }

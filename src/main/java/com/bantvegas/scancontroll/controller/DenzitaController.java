@@ -21,6 +21,9 @@ import java.util.*;
 @Slf4j
 public class DenzitaController {
 
+    // TU ZMENENÁ cesta na Windows disku!
+    private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
+
     private static final String DENZITA_SCRIPT_PATH =
             System.getProperty("user.dir") + File.separator +
                     "python" + File.separator +
@@ -48,7 +51,8 @@ public class DenzitaController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Musíš zadať productNumber"));
             }
 
-            File diskMaster = new File("data" + File.separator + "master" + File.separator + productNumber + File.separator + "master.png");
+            // TU POUŽÍVAJ SPRÁVNU CESTU:
+            File diskMaster = new File(MASTER_BASE_PATH + productNumber + File.separator + "master.png");
             if (!diskMaster.exists()) {
                 log.error("❌ Master etiketa pre produkt {} neexistuje: {}", productNumber, diskMaster.getAbsolutePath());
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Master etiketa pre tento produkt neexistuje"));
@@ -110,7 +114,6 @@ public class DenzitaController {
     }
 
     // ===== 3) DASHBOARD GET - ČÍTANIE Denzita reportov z TXT na disku =====
-    // !!! TU ZMENENÉ PATH !!!
     @GetMapping("/report/denzita")
     public List<Map<String, Object>> getAllDenzitaReports() throws IOException {
         File dir = new File("data/reports");

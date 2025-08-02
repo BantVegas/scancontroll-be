@@ -1,8 +1,7 @@
 package com.bantvegas.scancontroll.controller;
 
 import com.bantvegas.scancontroll.service.BarcodeService;
-import com.bantvegas.scancontroll.service.BarcodeService;
-import com.bantvegas.scancontroll.model.BarcodeResult; // Toto je SPRÁVNY import!
+import com.bantvegas.scancontroll.model.BarcodeResult; // SPRÁVNY import!
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class LabelController {
-    private static final String SCAN_DIR = "data/scan";
+    // Uprav na správnu Windows cestu:
+    private static final String SCAN_DIR = "C:/Users/lukac/Desktop/Scan/";
     private final BarcodeService barcodeService;
 
     @GetMapping("/barcode/{filename}")
@@ -27,8 +27,8 @@ public class LabelController {
         if (!f.exists()) return ResponseEntity.notFound().build();
 
         List<BarcodeResult> codes = barcodeService.decodeAllBarcodes(f);
-        if (codes.isEmpty()) {
-            return ResponseEntity.noContent().build();  // or ok(emptyList())
+        if (codes == null || codes.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(codes);
     }
