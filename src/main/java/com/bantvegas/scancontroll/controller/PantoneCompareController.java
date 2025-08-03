@@ -7,6 +7,10 @@ import com.bantvegas.scancontroll.service.PantoneService;
 import com.bantvegas.scancontroll.service.PantoneReportService;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/pantone")
 public class PantoneCompareController {
@@ -29,9 +33,13 @@ public class PantoneCompareController {
 
         // 2. Uloženie do reportu na disk
         PantoneReport report = new PantoneReport();
+        report.setReportType("PANTONE");
         report.setOperator(req.getOperator());
         report.setProductCode(req.getProductCode());
-        report.setDatetime(req.getDatetime());
+        // Ak nedodáš datetime z FE, použi aktuálny čas:
+        report.setDatetime(req.getDatetime() != null && !req.getDatetime().isEmpty()
+                ? req.getDatetime()
+                : LocalDateTime.now().toString());
         report.setPantoneCode(req.getPantoneCode());
         report.setPantoneHex(resp.getPantoneHex());
         report.setRefR(resp.getRefR());
@@ -45,6 +53,23 @@ public class PantoneCompareController {
         report.setRgbDistance(resp.getRgbDistance());
         report.setMatchPercent(resp.getMatchPercent());
         report.setRating(resp.getRating());
+
+        // ---- DOPLŇ: detailsJson ako MAP! ----
+        Map<String, Object> details = new HashMap<>();
+        details.put("pantoneCode", report.getPantoneCode());
+        details.put("pantoneHex", report.getPantoneHex());
+        details.put("refR", report.getRefR());
+        details.put("refG", report.getRefG());
+        details.put("refB", report.getRefB());
+        details.put("sampleR", report.getSampleR());
+        details.put("sampleG", report.getSampleG());
+        details.put("sampleB", report.getSampleB());
+        details.put("deltaE2000", report.getDeltaE2000());
+        details.put("deltaE76", report.getDeltaE76());
+        details.put("rgbDistance", report.getRgbDistance());
+        details.put("matchPercent", report.getMatchPercent());
+        details.put("rating", report.getRating());
+        report.setDetailsJson(details);
 
         pantoneReportService.savePantoneReport(report); // Uloží report aj TXT
 

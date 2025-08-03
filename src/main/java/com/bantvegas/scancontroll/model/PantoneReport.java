@@ -1,5 +1,8 @@
 package com.bantvegas.scancontroll.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class PantoneReport {
     private Long id;
     private String operator;
@@ -14,9 +17,9 @@ public class PantoneReport {
 
     // --- Pre dashboard/FE ---
     private String reportType;   // "PANTONE"
-    private String detailsJson;  // JSON string pre frontend
+    private Map<String, Object> detailsJson;  // OPRAVA: Map namiesto String!
 
-    // -- GETTER/SETTER --
+    // --- GETTER/SETTER ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -69,10 +72,11 @@ public class PantoneReport {
     public String getRating() { return rating; }
     public void setRating(String rating) { this.rating = rating; }
 
-    // --- NOVÉ: Pre dashboard/FE (musíš mať tieto!) ---
+    // --- NOVÉ: Pre dashboard/FE ---
     public String getReportType() { return reportType; }
     public void setReportType(String reportType) { this.reportType = reportType; }
 
-    public String getDetailsJson() { return detailsJson; }
-    public void setDetailsJson(String detailsJson) { this.detailsJson = detailsJson; }
+    public Map<String, Object> getDetailsJson() { return detailsJson; }
+    public void setDetailsJson(Map<String, Object> detailsJson) { this.detailsJson = detailsJson; }
 }
+

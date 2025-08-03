@@ -191,10 +191,10 @@ public class PantoneService {
 
     // Presne podľa frontend mapy!
     private String rating(double dE) {
-        if (dE < 1.5) return "Výborné";
-        if (dE < 3)   return "Dobre";
-        if (dE < 5)   return "Priemerné";
-        if (dE < 10)  return "Slabé";
+        if (dE < 3) return "Výborné";
+        if (dE < 5)   return "Dobre";
+        if (dE < 8)   return "Priemerné";
+        if (dE < 15)  return "Slabé";
         return "Neznáme";
     }
 

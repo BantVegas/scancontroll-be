@@ -1,7 +1,6 @@
 package com.bantvegas.scancontroll.service;
 
 import com.bantvegas.scancontroll.model.PantoneReport;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -79,8 +78,6 @@ public class PantoneReportService {
         File[] files = dir.listFiles((d, name) -> name.startsWith("pantone_") && name.endsWith(".txt"));
         if (files == null) return out;
 
-        ObjectMapper mapper = new ObjectMapper();
-
         for (File file : files) {
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                 Map<String, Object> item = new HashMap<>();
@@ -130,7 +127,9 @@ public class PantoneReportService {
                 detail.put("deltaE2000", deltaE2000);
                 detail.put("deltaE76", deltaE76);
 
-                item.put("detailsJson", mapper.writeValueAsString(detail));
+                // OPRAVA: detail dávame priamo ako Map (JSON objekt), NIE String!
+                item.put("detailsJson", detail);
+
                 out.add(item);
 
             } catch (Exception e) {
