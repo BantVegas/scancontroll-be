@@ -26,7 +26,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:5175",
+                "http://localhost:5176",
                 "https://scancontroll.vercel.app",
                 "https://scancontroll.eu",
                 "https://www.scancontroll.eu"

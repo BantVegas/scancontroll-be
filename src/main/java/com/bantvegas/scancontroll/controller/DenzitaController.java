@@ -21,7 +21,7 @@ import java.util.*;
 @Slf4j
 public class DenzitaController {
 
-    // TU ZMENENÁ cesta na Windows disku!
+    // Cesta k master etiketam na disku
     private static final String MASTER_BASE_PATH = "C:/Users/lukac/Desktop/Master/";
 
     private static final String DENZITA_SCRIPT_PATH =
@@ -39,35 +39,48 @@ public class DenzitaController {
     )
     public ResponseEntity<?> compareDenzita(
             @RequestParam("etiketa") MultipartFile etiketaFile,
-            @RequestParam("productNumber") String productNumber,
+            @RequestParam(value = "productNumber", required = false) String productNumber,
+            @RequestParam(value = "master", required = false) MultipartFile masterUpload,
             @RequestParam(value = "operator", required = false) String operator
     ) {
         File etiketaTmp = null;
+        File masterTmp = null;
         try {
             if (etiketaFile == null || etiketaFile.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Etiketa (etiketaFile) musí byť uploadnutá"));
             }
-            if (productNumber == null || productNumber.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Musíš zadať productNumber"));
-            }
 
-            // TU POUŽÍVAJ SPRÁVNU CESTU:
-            File diskMaster = new File(MASTER_BASE_PATH + productNumber + File.separator + "master.png");
-            if (!diskMaster.exists()) {
-                log.error("❌ Master etiketa pre produkt {} neexistuje: {}", productNumber, diskMaster.getAbsolutePath());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Master etiketa pre tento produkt neexistuje"));
+            // --- master: buď uploadnutý, alebo podľa productNumber ---
+            File masterFileToUse = null;
+
+            // 1. Priorita: uploadnutý master (cez FE)
+            if (masterUpload != null && !masterUpload.isEmpty()) {
+                masterTmp = File.createTempFile("denz-master-", ".png");
+                masterUpload.transferTo(masterTmp);
+                masterFileToUse = masterTmp;
+            }
+            // 2. Priorita: master z disku podľa productNumber
+            else if (productNumber != null && !productNumber.isBlank()) {
+                File diskMaster = new File(MASTER_BASE_PATH + productNumber + File.separator + "master.png");
+                if (!diskMaster.exists()) {
+                    log.error("❌ Master etiketa pre produkt {} neexistuje: {}", productNumber, diskMaster.getAbsolutePath());
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Master etiketa pre tento produkt neexistuje"));
+                }
+                masterFileToUse = diskMaster;
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("error", "Chýba master etiketa: musíš nahrať alebo zadať číslo produktu"));
             }
 
             etiketaTmp = File.createTempFile("denz-etiketa-", ".png");
             etiketaFile.transferTo(etiketaTmp);
 
-            Map<String, Object> result = callDenzitaPython(diskMaster, etiketaTmp);
+            Map<String, Object> result = callDenzitaPython(masterFileToUse, etiketaTmp);
 
             // uloženie iba ak máme všetky kanály
             if (hasAllChannels(result)) {
                 DenzitaReport report = new DenzitaReport();
                 report.setOperator(operator);
-                report.setProductCode(productNumber);
+                report.setProductCode(productNumber != null ? productNumber : "UPLOAD");
                 report.setDatetime(nowString());
                 report.setCyan(extractRel(result.get("cyan")));
                 report.setMagenta(extractRel(result.get("magenta")));
@@ -85,6 +98,7 @@ public class DenzitaController {
                     .body(Map.of("error", "Chyba backendu: " + e.getMessage()));
         } finally {
             if (etiketaTmp != null && etiketaTmp.exists()) etiketaTmp.delete();
+            if (masterTmp != null && masterTmp.exists()) masterTmp.delete();
         }
     }
 
@@ -259,6 +273,7 @@ public class DenzitaController {
         // reportType nie je povinný
     }
 }
+
 
 
 
