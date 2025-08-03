@@ -5,6 +5,7 @@ import com.bantvegas.scancontroll.dto.PantoneCompareResponse;
 import com.bantvegas.scancontroll.model.PantoneReport;
 import com.bantvegas.scancontroll.service.PantoneService;
 import com.bantvegas.scancontroll.service.PantoneReportService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -36,7 +37,6 @@ public class PantoneCompareController {
         report.setReportType("PANTONE");
         report.setOperator(req.getOperator());
         report.setProductCode(req.getProductCode());
-        // Ak nedodáš datetime z FE, použi aktuálny čas:
         report.setDatetime(req.getDatetime() != null && !req.getDatetime().isEmpty()
                 ? req.getDatetime()
                 : LocalDateTime.now().toString());
@@ -54,22 +54,30 @@ public class PantoneCompareController {
         report.setMatchPercent(resp.getMatchPercent());
         report.setRating(resp.getRating());
 
-        // ---- DOPLŇ: detailsJson ako MAP! ----
-        Map<String, Object> details = new HashMap<>();
-        details.put("pantoneCode", report.getPantoneCode());
-        details.put("pantoneHex", report.getPantoneHex());
-        details.put("refR", report.getRefR());
-        details.put("refG", report.getRefG());
-        details.put("refB", report.getRefB());
-        details.put("sampleR", report.getSampleR());
-        details.put("sampleG", report.getSampleG());
-        details.put("sampleB", report.getSampleB());
-        details.put("deltaE2000", report.getDeltaE2000());
-        details.put("deltaE76", report.getDeltaE76());
-        details.put("rgbDistance", report.getRgbDistance());
-        details.put("matchPercent", report.getMatchPercent());
-        details.put("rating", report.getRating());
-        report.setDetailsJson(details);
+        // --- SERIALIZUJ NA STRING ---
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, Object> details = new HashMap<>();
+            details.put("pantoneCode", report.getPantoneCode());
+            details.put("pantoneHex", report.getPantoneHex());
+            details.put("refR", report.getRefR());
+            details.put("refG", report.getRefG());
+            details.put("refB", report.getRefB());
+            details.put("sampleR", report.getSampleR());
+            details.put("sampleG", report.getSampleG());
+            details.put("sampleB", report.getSampleB());
+            details.put("deltaE2000", report.getDeltaE2000());
+            details.put("deltaE76", report.getDeltaE76());
+            details.put("rgbDistance", report.getRgbDistance());
+            details.put("matchPercent", report.getMatchPercent());
+            details.put("rating", report.getRating());
+
+            String detailsJson = objectMapper.writeValueAsString(details);
+            report.setDetailsJson(detailsJson);
+        } catch (Exception e) {
+            // Fallback na prázdny objekt ak niečo zlyhá
+            report.setDetailsJson("{}");
+        }
 
         pantoneReportService.savePantoneReport(report); // Uloží report aj TXT
 
@@ -77,3 +85,5 @@ public class PantoneCompareController {
         return resp;
     }
 }
+
+

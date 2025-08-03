@@ -30,7 +30,7 @@ public class WebConfig implements WebMvcConfigurer {
                 // povolené originy pre FE a preview/prod deployments
                 .allowedOriginPatterns(
                         // Lokálne vývojové prostredia:
-                        "http://localhost:5173",
+                        "http://localhost:5175",
                         "http://127.0.0.1:5173",
                         "http://localhost:3000",
                         "http://127.0.0.1:3000",

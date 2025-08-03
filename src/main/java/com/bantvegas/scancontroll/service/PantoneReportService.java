@@ -1,5 +1,6 @@
 package com.bantvegas.scancontroll.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.bantvegas.scancontroll.model.PantoneReport;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,6 @@ public class PantoneReportService {
         return report;
     }
 
-    // Vygeneruj ďalšie ID podľa počtu súborov
     private long getNextId() {
         File dir = new File(REPORTS_DIR);
         dir.mkdirs();
@@ -35,7 +35,7 @@ public class PantoneReportService {
                 .max(Long::compare).orElse(0L) + 1;
     }
 
-    // Ulož report ako TXT súbor na disk
+    // TXT zápis bežný, nemeniť
     private void saveReportToTxt(PantoneReport report) {
         try {
             File dir = new File(REPORTS_DIR);
@@ -71,26 +71,28 @@ public class PantoneReportService {
         }
     }
 
-    // Agregátor pre dashboard – vracia JSON pole map podľa dashboard štruktúry
+    // Agregátor pre dashboard – musí serializovať detailsJson ako String!
     public List<Map<String, Object>> getAllPantoneReports() {
         List<Map<String, Object>> out = new ArrayList<>();
         File dir = new File(REPORTS_DIR);
         File[] files = dir.listFiles((d, name) -> name.startsWith("pantone_") && name.endsWith(".txt"));
         if (files == null) return out;
 
+        ObjectMapper om = new ObjectMapper();
+
         for (File file : files) {
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                 Map<String, Object> item = new HashMap<>();
                 item.put("reportType", "PANTONE");
 
-                String id = "", operator = "", productCode = "", datetime = "";
+                Long id = null; String operator = "", productCode = "", datetime = "";
                 String pantoneCode = "", pantoneHex = "", rating = "";
                 Double matchPercent = null, deltaE2000 = null, deltaE76 = null;
                 Integer refR = null, refG = null, refB = null, sampleR = null, sampleG = null, sampleB = null;
 
                 String line;
                 while ((line = br.readLine()) != null) {
-                    if (line.startsWith("ID:")) id = line.replace("ID:", "").trim();
+                    if (line.startsWith("ID:")) id = Long.parseLong(line.replace("ID:", "").trim());
                     if (line.startsWith("Operátor:")) operator = line.replace("Operátor:", "").trim();
                     if (line.startsWith("Produkt:")) productCode = line.replace("Produkt:", "").trim();
                     if (line.startsWith("Čas:")) datetime = line.replace("Čas:", "").trim();
@@ -108,7 +110,7 @@ public class PantoneReportService {
                     if (line.startsWith("DeltaE76:")) deltaE76 = parseDoubleOrNull(line.replace("DeltaE76:", "").trim());
                 }
 
-                item.put("id", id.isEmpty() ? null : Long.parseLong(id));
+                item.put("id", id);
                 item.put("operator", operator);
                 item.put("productCode", productCode);
                 item.put("datetime", datetime);
@@ -127,8 +129,10 @@ public class PantoneReportService {
                 detail.put("deltaE2000", deltaE2000);
                 detail.put("deltaE76", deltaE76);
 
-                // OPRAVA: detail dávame priamo ako Map (JSON objekt), NIE String!
-                item.put("detailsJson", detail);
+                // SERIALIZUJ NA STRING (!!!)
+                String detailsJson = om.writeValueAsString(detail);
+
+                item.put("detailsJson", detailsJson);
 
                 out.add(item);
 
@@ -139,7 +143,6 @@ public class PantoneReportService {
         return out;
     }
 
-    // Helpery
     private String sanitizeFileName(String name) {
         return name.replaceAll("[^a-zA-Z0-9_-]", "_");
     }
