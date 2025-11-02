@@ -1,11 +1,12 @@
-// src/main/java/com/bantvegas/sctext/config/SecurityConfig.java
 package com.bantvegas.sctext.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.http.SessionCreationPolicy;
 
 @Configuration
 public class SecurityConfig {
@@ -13,18 +14,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CORS musí byť zapnutý, aby použil nastavenia z WebMvcConfigurer (WebConfig)
-                .cors(cors -> {})
-                // CSRF pri multipart API netreba
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // dôležité: povoliť preflight OPTIONS
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // celé API povoľ bez prihlásenia
-                        .requestMatchers("/api/**").permitAll()
-                        // všetko ostatné tiež (kľudne si uprav neskôr)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // preflight
+                        .requestMatchers("/api/**").permitAll()                // API povolené
                         .anyRequest().permitAll()
-                );
+                )
+                .httpBasic(b -> b.disable())
+                .formLogin(f -> f.disable());
         return http.build();
     }
 }
