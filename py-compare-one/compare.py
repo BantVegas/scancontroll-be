@@ -1,3 +1,4 @@
+# compare.py
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,18 +11,31 @@ import cv2
 from skimage.metrics import structural_similarity as ssim
 import pytesseract
 
-# --- ZBAR/PYZBAR ---
-from pyzbar.pyzbar import decode as zbar_decode
+# --- ZBAR/PYZBAR (voliteľné) ---
+ZBAR_AVAILABLE = True
+try:
+    from pyzbar.pyzbar import decode as zbar_decode  # type: ignore
+except Exception:
+    ZBAR_AVAILABLE = False
 
-# --- Tesseract cesta (Windows) ---
-TESSERACT_DEFAULT = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", TESSERACT_DEFAULT)
+# --- Tesseract cesta (bez natvrdo Windows) ---
+TESSERACT_CMD = os.getenv("TESSERACT_CMD")
+if TESSERACT_CMD:
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+
+# Feature flags (môžeš vypnúť ak chýbajú knižnice)
+ENABLE_OCR = os.getenv("ENABLE_OCR", "1").lower() not in ("0","false","no","off","")
+ENABLE_BARCODE = os.getenv("ENABLE_BARCODE", "1").lower() not in ("0","false","no","off","")
 
 app = FastAPI(title="compare-one")
 
+# CORS – povoľíme tvoje domény (scancontroll.eu, vercel)
+allow_origins = os.getenv("CORS_ALLOW_ORIGINS",
+                          "https://scancontroll.eu,https://*.vercel.app").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in allow_origins if o.strip()],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -37,6 +51,10 @@ def save_mem(d):
     with open(MEM_FILE, "w", encoding="utf-8") as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
 
+@app.get("/")
+def root():
+    return {"ok": True, "service": "compare-one", "version": "v1"}
+
 @app.get("/api/health")
 def health():
     return {"ok": True, "service": "compare-one"}
@@ -45,15 +63,16 @@ def health():
 def debug_state():
     return {
         "ok": True,
-        "tesseract": pytesseract.pytesseract.tesseract_cmd,
-        "zbar": True,      # ak by pyzbar nevedel importnúť zbar, endpoint by spadol už vyššie
-        "pyzbar": True
+        "tesseract": getattr(pytesseract.pytesseract, "tesseract_cmd", "auto"),
+        "pyzbar_import": ZBAR_AVAILABLE,
+        "ENABLE_OCR": ENABLE_OCR,
+        "ENABLE_BARCODE": ENABLE_BARCODE,
     }
 
 # ------------- helpers -------------
 def img_from_upload(f: UploadFile) -> Image.Image:
-    # čítame RAW bajty (bez seekovania do začiatku) – UploadFile drží súbor v pamäti
-    return Image.open(io.BytesIO(f.file.read())).convert("RGB")
+    data = f.file.read()
+    return Image.open(io.BytesIO(data)).convert("RGB")
 
 def to_b64_png(arr: np.ndarray) -> str:
     im = Image.fromarray(arr)
@@ -62,7 +81,8 @@ def to_b64_png(arr: np.ndarray) -> str:
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 def ocr_text(img: Image.Image, lang: str) -> str:
-    # OCR NECHÁVAM TAK, ako si písal – netuním nič
+    if not ENABLE_OCR:
+        return ""
     try:
         return pytesseract.image_to_string(img, lang=lang or "eng+slk")
     except Exception:
@@ -72,11 +92,9 @@ def ocr_text(img: Image.Image, lang: str) -> str:
 def _sym_norm(sym: str) -> str:
     s = (sym or "").upper().replace("-", "_")
     mapping = {
-        "EAN13": "EAN_13", "EAN8": "EAN_8",
-        "UPCA": "UPC_A", "UPCE": "UPC_E",
-        "QRCODE": "QR_CODE", "CODE128": "CODE_128",
-        "CODE39": "CODE_39", "DATAMATRIX": "DATA_MATRIX",
-        "PDF417": "PDF_417", "I25": "ITF"
+        "EAN13":"EAN_13","EAN8":"EAN_8","UPCA":"UPC_A","UPCE":"UPC_E",
+        "QRCODE":"QR_CODE","CODE128":"CODE_128","CODE39":"CODE_39",
+        "DATAMATRIX":"DATA_MATRIX","PDF417":"PDF_417","I25":"ITF"
     }
     return mapping.get(s, s)
 
@@ -90,22 +108,21 @@ def _ean13_ok(code: str) -> Optional[bool]:
     return chk == nums[12]
 
 def decode_barcodes(img: Image.Image) -> List[Dict]:
-    """
-    Vráti zoznam detekcií zo zadaného obrázka.
-    Každá položka: {symbology, value, x,y,w,h, checksumOk}
-    """
+    if not (ENABLE_BARCODE and ZBAR_AVAILABLE):
+        return []
     bgr = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     H, W = bgr.shape[:2]
 
     out: List[Dict] = []
-    # viacero pre-processing variantov pre robustnosť
     variants = [bgr]
     g = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     variants.append(cv2.cvtColor(clahe.apply(g), cv2.COLOR_GRAY2BGR))
-    thr = cv2.adaptiveThreshold(g, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 31, 5)
+    thr = cv2.adaptiveThreshold(g, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                cv2.THRESH_BINARY, 31, 5)
     variants.append(cv2.cvtColor(thr, cv2.COLOR_GRAY2BGR))
-    variants.append(cv2.resize(bgr, (min(2*W, 2500), min(2*H, 2500)), interpolation=cv2.INTER_CUBIC))
+    variants.append(cv2.resize(bgr, (min(2*W, 2500), min(2*H, 2500)),
+                               interpolation=cv2.INTER_CUBIC))
     variants.append(cv2.bitwise_not(bgr))
 
     seen = set()
@@ -120,7 +137,11 @@ def decode_barcodes(img: Image.Image) -> List[Dict]:
             else:
                 test = base
             arr = cv2.cvtColor(test, cv2.COLOR_BGR2RGB)
-            for r in zbar_decode(arr):
+            try:
+                dets = zbar_decode(arr)  # type: ignore
+            except Exception:
+                dets = []
+            for r in dets:
                 sym = _sym_norm(getattr(r, "type", "") or "BARCODE")
                 val = r.data.decode("utf-8", errors="ignore") if getattr(r, "data", None) else ""
                 rect = getattr(r, "rect", None)
@@ -140,8 +161,7 @@ def decode_barcodes(img: Image.Image) -> List[Dict]:
                     checksum_ok = True if v is None else bool(v)
 
                 out.append({
-                    "symbology": sym,
-                    "value": val,
+                    "symbology": sym, "value": val,
                     "x": int(x), "y": int(y), "w": int(w), "h": int(h),
                     "checksumOk": checksum_ok
                 })
@@ -167,7 +187,6 @@ def _merge_boxes(boxes: List[Tuple[int,int,int,int]], max_gap: int = 6) -> List[
                 if used[j]: continue
                 xx,yy,ww,hh = boxes[j]
                 xx2, yy2 = xx+ww, yy+hh
-                # prekryv s malou medzerou
                 if not (x2 + max_gap < xx or xx2 + max_gap < x or y2 + max_gap < yy or yy2 + max_gap < y):
                     x, y = min(x, xx), min(y, yy)
                     x2, y2 = max(x2, xx2), max(y2, yy2)
@@ -179,8 +198,6 @@ def _merge_boxes(boxes: List[Tuple[int,int,int,int]], max_gap: int = 6) -> List[
     return [tuple(map(int, b)) for b in boxes]
 
 def compare_graphics(master: Image.Image, etiketa: Image.Image):
-    # SSIM 0..1 (1 = identické)
-    # pracujeme v sivej a rovnakom rozmere
     m = cv2.cvtColor(np.array(master), cv2.COLOR_RGB2GRAY)
     e = cv2.cvtColor(np.array(etiketa), cv2.COLOR_RGB2GRAY)
     H = min(m.shape[0], e.shape[0]); W = min(m.shape[1], e.shape[1])
@@ -195,7 +212,6 @@ def compare_graphics(master: Image.Image, etiketa: Image.Image):
     val, diff = ssim(m_b, e_b, full=True)
     diff_img = ((1.0 - diff) * 255).astype(np.uint8)
 
-    # prahovanie + morfológia → boxy rozdielov
     _, bw = cv2.threshold(diff_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     k = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
     bw = cv2.morphologyEx(bw, cv2.MORPH_OPEN, k, iterations=1)
@@ -210,9 +226,8 @@ def compare_graphics(master: Image.Image, etiketa: Image.Image):
             boxes.append((x,y,w,h))
     boxes = _merge_boxes(boxes, max_gap=max(4, int(min(H,W)*0.015)))
 
-    # farebná náhľadová heatmapa
     heat = np.zeros((H,W,3), dtype=np.uint8)
-    heat[:,:,2] = diff_img  # červený kanál
+    heat[:,:,2] = diff_img
     preview_b64 = to_b64_png(heat)
     return float(val), boxes, preview_b64
 
@@ -231,21 +246,16 @@ async def compare_one(
     m_img = img_from_upload(master)
     e_img = img_from_upload(etiketa)
 
-    # OCR (nechávam bez zásahu)
     ocr_master = ocr_text(m_img, OCR_LANG)
     ocr_scan   = ocr_text(e_img, OCR_LANG)
 
-    # ---- BARCODE porovnanie (SET equality) ----
     det_m = decode_barcodes(m_img)
     det_s = decode_barcodes(e_img)
 
     master_set = {(d["symbology"], d["value"]) for d in det_m if d.get("checksumOk", True)}
     scan_set   = {(d["symbology"], d["value"]) for d in det_s if d.get("checksumOk", True)}
-
-    # „match“ iba ak sú PRESNE rovnaké množiny (žiadny chýbajúci ani navyše)
     barcode_match = bool(master_set) and (scan_set == master_set)
 
-    # položky pre FE – vyrábame hlavne zo SCAN-u; ak master niečo má a scan nie, pridáme „missing“
     items = []
     for d in det_s:
         sym = d["symbology"]; val = d["value"]
@@ -263,21 +273,16 @@ async def compare_one(
             "valid": valid, "reason": reason
         })
 
-    # kódy, ktoré má master a SCAN ich vôbec nenašiel → tiež „invalid“
-    missing = []
     for sym, val in master_set:
         if (sym, val) not in scan_set:
-            missing.append({
+            items.append({
                 "symbology": sym, "value": val,
                 "x": 0, "y": 0, "w": 0, "h": 0,
                 "valid": False, "reason": "missing on scan"
             })
-    items.extend(missing)
 
-    # ---- GRAFIKA ----
     ssim_val, diff_boxes, diff_preview_b64 = compare_graphics(m_img, e_img)
 
-    # ukladanie štatistiky
     sample = {
         "operator": operator or "-",
         "productNumber": productNumber or "-",
@@ -294,25 +299,13 @@ async def compare_one(
         "operator": operator or "-",
         "productNumber": productNumber or "-",
         "spoolNumber": spoolNumber or "-",
-
-        "ocr": {
-            "masterText": ocr_master,
-            "scanText": ocr_scan
-        },
-
-        # >>> FE očakáva 'barcode.items' (valid=false => CHYBA)
-        "barcode": {
-            "items": items,
-            "match": barcode_match
-        },
-
+        "ocr": {"masterText": ocr_master, "scanText": ocr_scan},
+        "barcode": {"items": items, "match": barcode_match},
         "graphics": {
-            "ssim": ssim_val,                 # 0..1 (bližšie k 1 = lepšie)
+            "ssim": ssim_val,
             "boxes": [{"x":x,"y":y,"w":w,"h":h} for (x,y,w,h) in diff_boxes],
-            "preview": diff_preview_b64       # PNG base64 (bez data: prefixu)
+            "preview": diff_preview_b64
         },
-
-        # možno sa ti hodí späť do FE
         "image": None,
         "width": int(e_img.width),
         "height": int(e_img.height)
