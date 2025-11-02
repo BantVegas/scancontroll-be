@@ -1,0 +1,228 @@
+{
+  "fake_errors": [
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffCount": 0,
+      "barcodeOK": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffCount": 50,
+      "barcodeOK": false,
+      "ssim": 0.27877788497710637
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffCount": 50,
+      "barcodeOK": false,
+      "ssim": 0.27877788497710637
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffCount": 50,
+      "barcodeOK": false,
+      "ssim": 0.45977096769037
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 12,
+      "barcodeMatch": false,
+      "ssim": 0.45977096769037
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 12,
+      "barcodeMatch": false,
+      "ssim": 0.45977096769037
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 17,
+      "barcodeMatch": true,
+      "ssim": 0.482939176312503
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 42,
+      "barcodeMatch": false,
+      "ssim": 0.5744473093445431
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 58,
+      "barcodeMatch": false,
+      "ssim": 0.9928345373164817
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 58,
+      "barcodeMatch": false,
+      "ssim": 0.9928345373164817
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 58,
+      "barcodeMatch": false,
+      "ssim": 0.9928345373164817
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 71,
+      "barcodeMatch": false,
+      "ssim": 0.9938147248469603
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 18,
+      "barcodeMatch": false,
+      "ssim": 0.9854109377377004
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 18,
+      "barcodeMatch": false,
+      "ssim": 0.9854109377377004
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 18,
+      "barcodeMatch": false,
+      "ssim": 0.9854109377377004
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 18,
+      "barcodeMatch": false,
+      "ssim": 0.9854109377377004
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 12,
+      "barcodeMatch": false,
+      "ssim": 0.45977096769037
+    },
+    {
+      "operator": "-",
+      "productNumber": "-",
+      "spoolNumber": "-",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "Mato",
+      "productNumber": "g202500114",
+      "spoolNumber": "7412",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "Mato",
+      "productNumber": "g202500114",
+      "spoolNumber": "7412",
+      "ocrDiffChars": 12,
+      "barcodeMatch": false,
+      "ssim": 0.45977096769037
+    },
+    {
+      "operator": "Mato",
+      "productNumber": "g202500114",
+      "spoolNumber": "7412",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    },
+    {
+      "operator": "Mato",
+      "productNumber": "g202500114",
+      "spoolNumber": "7412",
+      "ocrDiffChars": 12,
+      "barcodeMatch": false,
+      "ssim": 0.45977096769037
+    },
+    {
+      "operator": "Mato",
+      "productNumber": "g202500114",
+      "spoolNumber": "7412",
+      "ocrDiffChars": 18,
+      "barcodeMatch": false,
+      "ssim": 0.9854109377377004
+    },
+    {
+      "operator": "Mato",
+      "productNumber": "g202500114",
+      "spoolNumber": "7412",
+      "ocrDiffChars": 0,
+      "barcodeMatch": true,
+      "ssim": 1.0
+    }
+  ]
+}
