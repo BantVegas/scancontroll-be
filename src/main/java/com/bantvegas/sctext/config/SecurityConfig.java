@@ -4,7 +4,6 @@ package com.bantvegas.sctext.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -18,46 +17,40 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOrigins(List.of(
+                "https://scancontroll.eu",
+                "https://www.scancontroll.eu",
+                "https://sc-text-fe.vercel.app",
+                "https://sc-text-fe-git-main-bantvegas-projects.vercel.app"
+        ));
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setExposedHeaders(List.of("*"));
+        cfg.setAllowCredentials(false);
+        cfg.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cfg);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults())
+                .cors(c -> c.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // preflight
-                        .requestMatchers("/api/**").permitAll()                // API povolené
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/**").permitAll()
                         .anyRequest().permitAll()
                 )
                 .httpBasic(b -> b.disable())
                 .formLogin(f -> f.disable());
 
         return http.build();
-    }
-
-    /**
-     * Povolené FE domény (scancontroll.eu + www + vercel preview).
-     * Ak používaš iný FE origin, pridaj ho sem.
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(
-                "https://scancontroll.eu",
-                "https://www.scancontroll.eu",
-                "https://scancontroll-fe.vercel.app" // nechaj pre preview buildy
-        ));
-        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-        cfg.setAllowedHeaders(List.of(
-                "Origin","Content-Type","Accept","Authorization",
-                "X-Requested-With","Cache-Control","Pragma"
-        ));
-        // Cookie-based auth nepoužívame; nechávam false. Ak by si chcel cookies, prepnúť na true.
-        cfg.setAllowCredentials(false);
-        cfg.setMaxAge(3600L); // cache pre preflight
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", cfg);
-        return source;
     }
 }
 
