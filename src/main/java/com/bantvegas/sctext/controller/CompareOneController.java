@@ -9,9 +9,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -31,19 +29,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class CompareOneController {
 
-    // ===== RestTemplate (s timeoutmi) =====
-    @Bean
-    public RestTemplate restTemplate() {
-        SimpleClientHttpRequestFactory f = new SimpleClientHttpRequestFactory();
-        f.setConnectTimeout(5_000);
-        f.setReadTimeout(15_000);
-        return new RestTemplate(f);
-    }
-
     private final RestTemplate restTemplate;
     private final ObjectMapper om = new ObjectMapper();
 
-    // Nechytáme sa na localhost default – nútime to nastaviť cez env / application.properties
+    // Nutíme nastavenie cez env / application.properties
     @Value("${python.compare.one.url:}")
     private String pyOneUrl;
 
@@ -85,7 +74,6 @@ public class CompareOneController {
     // ---- dátové typy na výstup
     @SuppressWarnings("unchecked")
     private Map<String, Object> normalizeLegacy(Map<String, Object> legacy, int labelW, int labelH, String etiketaDataUrl) {
-        // očakávame perLabels[0] -> spravíme unifikovaný tvar
         List<Map<String, Object>> perLabels;
         Object plObj = legacy.get("perLabels");
         if (plObj instanceof List) {
@@ -143,7 +131,6 @@ public class CompareOneController {
         String imgB64 = String.valueOf(pl.getOrDefault("image", ""));
         String image = imgB64.length() > 64 ? toImgUrl(imgB64) : etiketaDataUrl;
 
-        // OCR texty, ak existujú (voliteľné)
         String ocrMaster = String.valueOf(pl.getOrDefault("ocrTextMaster", ""));
         String ocrScan = String.valueOf(pl.getOrDefault("ocrTextScan", ""));
 
@@ -177,7 +164,6 @@ public class CompareOneController {
             @RequestParam(value = "productNumber", required = false) String productNumber
     ) {
         try {
-            // -- rýchla kontrola konfigurácie (Fail-Fast)
             if (pyOneUrl == null || pyOneUrl.isBlank()) {
                 return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                         .body(Map.of("status", "NOK", "reason", "PY_COMPARE_ONE_URL nie je nastavené"));
@@ -187,14 +173,12 @@ public class CompareOneController {
                         .body(Map.of("status", "NOK", "reason", "PY_COMPARE_URL nie je nastavené"));
             }
 
-            // rozmer masteru (pre legacy fallback)
             int mw = 0, mh = 0;
             try (InputStream is = master.getInputStream()) {
                 BufferedImage im = ImageIO.read(is);
                 if (im != null) { mw = im.getWidth(); mh = im.getHeight(); }
             }
 
-            // multipart pre nové PY /api/compare-one
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("master", filePart("master", master));
             body.add("etiketa", filePart("etiketa", etiketa));
@@ -217,7 +201,6 @@ public class CompareOneController {
                 log.warn("PY one call failed: {}", ex.toString());
             }
 
-            // fallback na legacy /api/compare (rows=1, cols=1)
             if (pyResp == null) {
                 try {
                     MultiValueMap<String, Object> body2 = new LinkedMultiValueMap<>();
@@ -247,7 +230,6 @@ public class CompareOneController {
                 }
             }
 
-            // ignore-rules (ak je Firestore k dispozícii)
             if (firestore != null && productNumber != null && !productNumber.isBlank()) {
                 pyResp = applyIgnoreRules(pyResp, productNumber);
             }
@@ -261,7 +243,7 @@ public class CompareOneController {
         }
     }
 
-    // ===== Feedback: uloženie fake chýb (acknowledged false positives) =====
+    // ===== Feedback: uloženie fake chýb =====
     @PostMapping(path = "/compare-one/feedback", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> feedback(@RequestBody Map<String, Object> body) {
         try {
@@ -272,7 +254,6 @@ public class CompareOneController {
             if (product.isEmpty() || product.equals("-")) {
                 return ResponseEntity.badRequest().body(Map.of("status", "NOK", "reason", "productNumber je povinné"));
             }
-            // očakávame: { productNumber, imageW, imageH, ackBoxes: [{x,y,w,h,type}] }
             Number iw = (Number) body.getOrDefault("imageW", 0);
             Number ih = (Number) body.getOrDefault("imageH", 0);
             @SuppressWarnings("unchecked")
@@ -296,7 +277,7 @@ public class CompareOneController {
         }
     }
 
-    // ===== načítanie a aplikácia ignore rules na výstupné boxy =====
+    // ===== načítanie a aplikácia ignore rules =====
     @SuppressWarnings("unchecked")
     private Map<String, Object> applyIgnoreRules(Map<String, Object> out, String productNumber) throws Exception {
         if (out == null) return out;
@@ -310,7 +291,6 @@ public class CompareOneController {
         List<Map<String, Object>> boxes = (List<Map<String, Object>>) graphics.getOrDefault("boxes", List.of());
         if (boxes.isEmpty()) return out;
 
-        // Normalizované pravidlá
         List<Map<String, Object>> rules = new ArrayList<>();
         for (QueryDocumentSnapshot d : docs) {
             Map<String, Object> data = d.getData();
@@ -318,7 +298,6 @@ public class CompareOneController {
             rules.addAll(ack);
         }
 
-        // jednoduché filtrovanie: vyhoď box, ktorý má IOU >= 0.7 s nejakým pravidlom rovnakej type
         List<Map<String, Object>> kept = new ArrayList<>();
         for (Map<String, Object> b : boxes) {
             double bx = asD(b.get("x")), by = asD(b.get("y")), bw = asD(b.get("w")), bh = asD(b.get("h"));
@@ -364,5 +343,6 @@ public class CompareOneController {
         @Override public long contentLength() { return -1; }
     }
 }
+
 
 
